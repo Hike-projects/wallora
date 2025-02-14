@@ -6,7 +6,7 @@ function Uploader({ onUploadSuccess }) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  // Handle file selection
+  // Handle file input
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
     if (!selectedFile) {
@@ -21,7 +21,7 @@ function Uploader({ onUploadSuccess }) {
       return;
     }
 
-    // Validate file size (5MB max)
+    // Validate file size
     const maxSize = 5 * 1024 * 1024; // 5 MB
     if (selectedFile.size > maxSize) {
       setError('File size must be less than 5 MB.');
@@ -38,7 +38,7 @@ function Uploader({ onUploadSuccess }) {
     e.preventDefault();
 
     if (!file) {
-      setError('No file selected for upload. Please choose a file.');
+      setError('No file selected for upload.');
       return;
     }
 
@@ -46,28 +46,29 @@ function Uploader({ onUploadSuccess }) {
       setError('');
       setSuccess('');
 
-      // Sanitize filename and construct the file path
-      const fileName = encodeURIComponent(file.name.trim()); // Sanitize spaces and special characters
-      const filePath = `uploads/
-${fileName}`; // Place under 'uploads' folder
+      // Generate file path
+      const filePath = `uploads/$
+{encodeURIComponent(file.name.trim())}`;
+      console.log('Uploading file to:', filePath); // Debug path
 
+      // Upload file to Supabase storage
       const { data, error } = await supabase.storage
-        .from('wallpapers') // Bucket name
-        .upload(filePath, file, { upsert: true }); // Upsert overwrites existing files
+        .from('wallpapers')
+        .upload(filePath, file, { upsert: true });
 
       if (error) {
-        console.error('Supabase upload error:', error.message);
-        setError(`Failed to upload wallpaper: $
-{error.message}`);
+        console.error('Upload error:', error.message);
+        setError(`Failed to upload wallpaper:
+${error.message}`);
       } else {
         setSuccess('Wallpaper uploaded successfully!');
         setFile(null);
 
-        // Call the parent's success callback to update the gallery
+        // Notify parent to refresh the gallery
         if (onUploadSuccess) onUploadSuccess();
       }
     } catch (err) {
-      console.error('Unexpected error during upload:', err.message);
+      console.error('Unexpected upload error:', err.message);
       setError('An unexpected error occurred during upload.');
     }
   };
