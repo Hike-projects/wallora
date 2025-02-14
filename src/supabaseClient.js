@@ -1,11 +1,21 @@
-// src/supabaseClient.js
-import { createClient } from "@supabase/supabase-js";
+import supabase from './supabaseClient';
 
-// Use environment variables for Supabase credentials
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+async function getSignedUrl(bucket, fileName) {
+  const { data, error } = await supabase.storage
+    .from(bucket)
+    .createSignedUrl(fileName, 60); // URL valid for 60 seconds
 
-// Create Supabase client
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+  if (error) {
+    console.error('Error generating signed URL:', error.message);
+    return null;
+  }
 
-export default supabase;
+  return data.signedUrl;
+}
+
+// Example usage:
+const bucket = 'wallpapers';
+const fileName = 'example.jpg';
+getSignedUrl(bucket, fileName).then((url) => {
+  console.log('Signed URL:', url);
+});
