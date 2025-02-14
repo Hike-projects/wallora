@@ -1,26 +1,30 @@
-// src/pages/Home.jsx
-import React from "react";
-import { Link } from "react-router-dom";
+import React, { useState, useEffect } from 'react';
+import supabase from '../supabaseClient';
+import WallpaperList from '../components/WallpaperList';
 
-const Home = () => {
+function Home() {
+  const [wallpapers, setWallpapers] = useState([]);
+
+  useEffect(() => {
+    async function fetchWallpapers() {
+      const { data, error } = await supabase.storage.from('wallpapers').list();
+
+      if (error) {
+        console.error('Error fetching wallpapers:', error.message);
+      } else {
+        setWallpapers(data || []);
+      }
+    }
+
+    fetchWallpapers();
+  }, []);
+
   return (
-    <div style={{ textAlign: "center", padding: "50px" }}>
-      <h1>Welcome to the Wallpaper App</h1>
-      <p>Browse and download beautiful wallpapers!</p>
-      <Link
-        to="/gallery"
-        style={{
-          padding: "10px 20px",
-          backgroundColor: "#007BFF",
-          color: "white",
-          textDecoration: "none",
-          borderRadius: "5px",
-        }}
-      >
-        Go to Gallery
-      </Link>
+    <div>
+      <h1>Wallpaper Gallery</h1>
+      <WallpaperList wallpapers={wallpapers} />
     </div>
   );
-};
+}
 
 export default Home;
