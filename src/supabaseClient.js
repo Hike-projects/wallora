@@ -1,21 +1,9 @@
-import supabase from './supabaseClient';
+import { createClient } from '@supabase/supabase-js';
 
-async function getSignedUrl(bucket, fileName) {
-  const { data, error } = await supabase.storage
-    .from(bucket)
-    .createSignedUrl(fileName, 60); // URL valid for 60 seconds
+// Replace with your actual Supabase Project URL and Public Anon Key
+const SUPABASE_URL = 'https://rptdmaistscgifwhnkzg.supabase.co'; // Your Project URL
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInT5cCI6IkpXVCJ9......'; // Your anon key
 
-  if (error) {
-    console.error('Error generating signed URL:', error.message);
-    return null;
-  }
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  return data.signedUrl;
-}
-
-// Example usage:
-const bucket = 'wallpapers';
-const fileName = 'example.jpg';
-getSignedUrl(bucket, fileName).then((url) => {
-  console.log('Signed URL:', url);
-});
+export default supabase;
