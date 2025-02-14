@@ -7,18 +7,34 @@ function Home() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  // Fetch wallpapers from the Supabase bucket
+  // Fetch wallpapers and generate public URLs
   useEffect(() => {
     async function fetchWallpapers() {
       setError('');
       setSuccess('');
-      const { data, error } = await supabase.storage.from('wallpapers').list(); // Fetch list of uploaded files
 
-      if (error) {
-        console.error('Error fetching wallpapers:', error.message);
-        setError('Failed to load wallpapers.');
-      } else {
-        setWallpapers(data || []);
+      try {
+        const { data, error } = await supabase.storage.from('wallpapers').list('uploads'); // Get files in the 'uploads' folder
+
+        if (error) {
+          console.error('Error fetching wallpapers:', error.message);
+          setError('Failed to load wallpapers.');
+          return;
+        }
+
+        // Generate public URLs for all wallpapers
+        const wallpaperWithUrls = data.map((wallpaper) => {
+          const { publicUrl } = supabase.storage
+            .from('wallpapers')
+            .getPublicUrl(`uploads/$
+{wallpaper.name}`);
+          return { name: wallpaper.name, url: publicUrl };
+        });
+
+        setWallpapers(wallpaperWithUrls);
+      } catch (err) {
+        console.error('Unexpected error:', err.message);
+        setError('An unexpected error occurred while fetching wallpapers.');
       }
     }
 
@@ -33,14 +49,12 @@ function Home() {
       return;
     }
 
-    // Validate file type
     const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
     if (!allowedTypes.includes(selectedFile.type)) {
       setError('Only JPG, PNG, and WEBP files are allowed.');
       return;
     }
 
-    // Validate file size (5MB max)
     const maxSize = 5 * 1024 * 1024; // 5 MB
     if (selectedFile.size > maxSize) {
       setError('File size must be less than 5 MB.');
@@ -64,22 +78,17 @@ function Home() {
       setError('');
       setSuccess('');
 
-      // Properly construct the file path
       const filePath = `uploads/
 ${encodeURIComponent(file.name)}`;
-
-      // Upload file to Supabase "wallpapers" bucket
       const { data, error } = await supabase.storage
-        .from('wallpapers') // Bucket name
+        .from('wallpapers')
         .upload(filePath, file, { upsert: true });
 
       if (error) {
         console.error('Error uploading file:', error.message);
-        setError(`Failed to upload wallpaper: $
-{error.message}`);
+        setError(`Failed to upload wallpaper: ${error.message}`);
       } else {
         setSuccess('Wallpaper uploaded successfully!');
-        console.log('File uploaded to path:', data.path);
         setFile(null);
       }
     } catch (err) {
@@ -100,23 +109,21 @@ ${encodeURIComponent(file.name)}`;
       {error && <p style={{ color: 'red' }}>{error}</p>}
       {success && <p style={{ color: 'green' }}>{success}</p>}
 
-      {/* Display Uploaded Wallpapers */}
+      {/* Wallpaper Previews */}
       <div>
-        <h2>Available Wallpapers:</h2>
-        <ul>
+        <h2>Uploaded Wallpapers:</h2>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
           {wallpapers.map((wallpaper) => (
-            <li key={wallpaper.name}>
-              <a
-                href={`https://rptdmaistscgifwhnkzg.supabase.co/storage/v1/object/public/wallpapers/
-${wallpaper.name}`}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                {wallpaper.name}
-              </a>
-            </li>
+            <div key={wallpaper.name} style={{ textAlign: 'center' }}>
+              <img
+                src={wallpaper.url}
+                alt={wallpaper.name}
+                style={{ width: '150px', height: 'auto', borderRadius: '8px', boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.2)' }}
+              />
+              <p>{wallpaper.name}</p>
+            </div>
           ))}
-        </ul>
+        </div>
       </div>
     </div>
   );
