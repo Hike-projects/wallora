@@ -1,109 +1,124 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import supabase from '../supabaseClient';
-import WallpaperList from '../components/WallpaperList';
 
 function Home() {
-  const [wallpapers, setWallpapers] = useState([]);
   const [file, setFile] = useState(null);
+  const [wallpapers, setWallpapers] = useState([]);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
   // Fetch wallpapers from the Supabase bucket
   useEffect(() => {
     async function fetchWallpapers() {
-      const { data, error } = await supabase.storage.from('wallpapers').list();
+      setError('');
+      setSuccess('');
+      const { data, error } = await supabase.storage.from('wallpapers').list(); // Fetch list of files in the bucket
+
       if (error) {
         console.error('Error fetching wallpapers:', error.message);
         setError('Failed to load wallpapers.');
       } else {
         setWallpapers(data || []);
-        setError('');
       }
     }
+
     fetchWallpapers();
-  }, [success]);
+  }, [success]); // Re-fetch wallpapers when a new upload succeeds
 
   // Handle file selection
   const handleFileChange = (e) => {
-    setFile(e.target.files[0]);
+    const selectedFile = e.target.files[0];
+
+    if (!selectedFile) {
+      setError('Please select a file.');
+      return;
+    }
+
+    // Validate file type (only image files allowed)
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(selectedFile.type)) {
+      setError('Only JPG, PNG, and WEBP file types are allowed.');
+      return;
+    }
+
+    // Validate file size (5MB max)
+    const maxSize = 5 * 1024 * 1024; // 5 MB
+    if (selectedFile.size > maxSize) {
+      setError('File size must be less than 5 MB.');
+      return;
+    }
+
+    setFile(selectedFile);
+    setError(''); // Clear previous errors
   };
 
   // Handle file upload
   const handleUpload = async (e) => {
     e.preventDefault();
+
     if (!file) {
-      setError('Please select a file to upload.');
+      setError('Please select a file before uploading.');
       return;
     }
-    setError('');
-    setSuccess('');
 
-    const { data, error } = await supabase.storage
-      .from('wallpapers')
-      .upload(file.name, file);
+    try {
+      setError('');
+      setSuccess('');
 
-    if (error) {
-      console.error('Error uploading file:', error.message);
-      setError('Failed to upload the wallpaper.');
-    } else {
-      console.log('File uploaded successfully:', data);
+      // Upload file to Supabase storage
+      const { data, error } = await supabase.storage
+        .from('wallpapers') // The storage bucket name
+        .upload(`uploads/$
+{file.name}`, file, { upsert: true }); // Place files in an "uploads" folder
+
+      if (error) {
+        console.error('Error uploading file:', error.message);
+        setError(`Failed to upload wallpaper:
+${error.message}`);
+        return;
+      }
+
       setSuccess('Wallpaper uploaded successfully!');
-      setFile(null); // Reset file input
+      setFile(null); // Reset file state after successful upload
+    } catch (err) {
+      console.error('Unexpected error during upload:', err.message);
+      setError('An unexpected error occurred during upload.');
     }
   };
 
   return (
-    <div style={styles.container}>
-      <header style={styles.header}>
-        <h1>Wallpaper Gallery</h1>
-      </header>
-      <div style={styles.uploadSection}>
-        <p>Upload a new wallpaper:</p>
+    <div>
+      <h1>Wallpaper Gallery</h1>
+
+      {/* File Upload Section */}
+      <div>
         <form onSubmit={handleUpload}>
           <input type="file" accept="image/*" onChange={handleFileChange} />
-          <button type="submit" style={styles.uploadButton}>
-            Upload
-          </button>
+          <button type="submit">Upload</button>
         </form>
-        {error && <p style={styles.error}>{error}</p>}
-        {success && <p style={styles.success}>{success}</p>}
+        {error && <p style={{ color: 'red' }}>{error}</p>}
+        {success && <p style={{ color: 'green' }}>{success}</p>}
       </div>
-      <WallpaperList wallpapers={wallpapers} />
+
+      {/* Display Uploaded Wallpapers */}
+      <div>
+        <h2>Available Wallpapers:</h2>
+        <ul>
+          {wallpapers.map((wallpaper) => (
+            <li key={wallpaper.name}>
+              <a
+                href={`https://rptdmaistscgifwhnkzg.supabase.co/storage/v1/object/public/wallpapers/${wallpaper.name}`} // Accessible wallpaper URL
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {wallpaper.name}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 }
-
-const styles = {
-  container: {
-    fontFamily: 'Arial, sans-serif',
-    padding: '20px',
-    backgroundColor: '#f5f5f5',
-    minHeight: '100vh',
-  },
-  header: {
-    textAlign: 'center',
-    marginBottom: '20px',
-  },
-  uploadSection: {
-    textAlign: 'center',
-    marginBottom: '30px',
-  },
-  uploadButton: {
-    marginLeft: '10px',
-    padding: '10px 15px',
-    backgroundColor: '#007BFF',
-    color: '#fff',
-    border: 'none',
-    cursor: 'pointer',
-  },
-  error: {
-    color: 'red',
-    marginTop: '10px',
-  },
-  success: {
-    color: 'green',
-    marginTop: '10px',
-  },
-};
 
 export default Home;
