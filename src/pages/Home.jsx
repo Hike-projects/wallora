@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import supabase from '../supabaseClient';
 import Uploader from '../components/Uploader';
 
-export default function Home() {
+function Home() {
   const [wallpapers, setWallpapers] = useState([]);
   const [error, setError] = useState('');
 
@@ -14,14 +14,17 @@ export default function Home() {
       try {
         const { data, error } = await supabase.storage.from('wallpapers').list('uploads');
         if (error) {
-          setError('Failed to load wallpapers');
+          setError('Failed to load wallpapers.');
           console.error(error.message);
           return;
         }
 
         // Generate public URLs
         const wallpaperWithUrls = data.map((wallpaper) => {
-          const { publicUrl } = supabase.storage.from('wallpapers').getPublicUrl(`uploads/${wallpaper.name}`);
+          const { publicUrl } = supabase.storage
+            .from('wallpapers')
+            .getPublicUrl(`uploads/
+${wallpaper.name}`);
           return { name: wallpaper.name, url: publicUrl };
         });
 
@@ -50,7 +53,12 @@ export default function Home() {
         {wallpapers.map((wallpaper) => (
           <div key={wallpaper.name} style={styles.card}>
             {/* Image */}
-            <img src={wallpaper.url} alt={wallpaper.name} style={styles.cardImage} />
+            <img
+              src={wallpaper.url}
+              alt={wallpaper.name}
+              style={styles.cardImage}
+              onError={() => setError('Image failed to load.')}
+            />
             {/* Card Footer */}
             <div style={styles.cardFooter}>
               <div>
@@ -111,3 +119,5 @@ const styles = {
     padding: 0,
   },
 };
+
+export default Home;
