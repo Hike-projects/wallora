@@ -6,35 +6,36 @@ function Home() {
   const [wallpapers, setWallpapers] = useState([]);
   const [error, setError] = useState('');
 
-  // Fetch wallpapers with public URLs
-  useEffect(() => {
-    async function fetchWallpapers() {
+  // Fetch wallpapers from storage
+  const fetchWallpapers = async () => {
+    try {
       setError('');
+      const { data, error } = await supabase.storage.from('wallpapers').list('uploads'); // Fetch the list of uploaded wallpapers
 
-      try {
-        const { data, error } = await supabase.storage.from('wallpapers').list('uploads');
-        if (error) {
-          setError('Failed to load wallpapers.');
-          console.error(error.message);
-          return;
-        }
-
-        // Generate public URLs
-        const wallpaperWithUrls = data.map((wallpaper) => {
-          const { publicUrl } = supabase.storage
-            .from('wallpapers')
-            .getPublicUrl(`uploads/
-${wallpaper.name}`);
-          return { name: wallpaper.name, url: publicUrl };
-        });
-
-        setWallpapers(wallpaperWithUrls);
-      } catch (err) {
-        setError('An error occurred while fetching wallpapers.');
-        console.error(err.message);
+      if (error) {
+        console.error('Error fetching wallpapers:', error.message);
+        setError('Failed to load wallpapers.');
+        return;
       }
-    }
 
+      // Generate public URLs for each wallpaper
+      const wallpaperWithUrls = data.map((wallpaper) => {
+        const { publicUrl } = supabase.storage
+          .from('wallpapers')
+          .getPublicUrl(`uploads/${wallpaper.name}`);
+        console.log('Public URL:', publicUrl); // Debug public URL
+        return { name: wallpaper.name, url: publicUrl };
+      });
+
+      setWallpapers(wallpaperWithUrls);
+    } catch (err) {
+      console.error('Error during wallpaper fetch:', err.message);
+      setError('An error occurred while fetching wallpapers.');
+    }
+  };
+
+  // Load wallpapers on component mount
+  useEffect(() => {
     fetchWallpapers();
   }, []);
 
@@ -52,20 +53,19 @@ ${wallpaper.name}`);
       <div style={styles.galleryGrid}>
         {wallpapers.map((wallpaper) => (
           <div key={wallpaper.name} style={styles.card}>
-            {/* Image */}
+            {/* Image Preview */}
             <img
               src={wallpaper.url}
               alt={wallpaper.name}
               style={styles.cardImage}
-              onError={() => setError('Image failed to load.')}
+              onError={() => setError('Image failed to load. Check the URL or upload.')}
             />
             {/* Card Footer */}
             <div style={styles.cardFooter}>
               <div>
                 <p style={styles.cardTitle}>{wallpaper.name.split('.')[0]}</p>
-                <p style={styles.cardSubtitle}>Kxnt</p>
+                <p style={styles.cardSubtitle}>Uploader Name</p>
               </div>
-              {/* Like Button */}
               <button style={styles.likeButton}>❤️</button>
             </div>
           </div>
